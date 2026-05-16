@@ -1,0 +1,25 @@
+# Secrets & credentials
+.env
+credentials.json
+token.json
+
+# Temporary / regenerable files
+.tmp/
+!.tmp/.gitkeep
+
+# .NET build output (regenerated from source)
+bin/
+obj/
+dist/
+*.user
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# OS / editor
+.DS_Store
+Thumbs.db

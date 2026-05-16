@@ -1,0 +1,6 @@
+EnumDisplayMonitors
+GetMonitorInfo
+MONITORINFOEXW
+MonitorFromPoint
+SetWindowDisplayAffinity
+SetWindowPos
