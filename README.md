@@ -34,9 +34,11 @@ spacedeskの**拡張**ディスプレイへ表示。実際のマウス・キー�
 2. **Phone: install the spacedesk app** — "spacedesk - USB display for PC"
    (iPhone / Android).
 3. **Connect the PC and the phone to the same Wi‑Fi.**
-4. **Use "Extend" display mode, NOT "Duplicate".** ⚠ With Duplicate you
-   cannot operate the screen. Check Windows Settings → System → Display
-   shows two (extended) displays.
+4. **Set the display to "extend".** After the phone is connected,
+   right‑click the desktop → **"Display settings"** → in **"Multiple
+   displays"** choose **"Extend these displays"**. ⚠ Do **NOT** choose
+   **"Duplicate these displays"** — with Duplicate you cannot operate the
+   screen. (Quick way: **Windows key + P** → **"Extend"**.)
 5. Connect the phone in spacedesk so the extended display is active.
    Then start this app: the phone becomes a VR (side‑by‑side) screen and
    you can use the PC normally while watching it.
@@ -51,8 +53,10 @@ spacedeskの**拡張**ディスプレイへ表示。実際のマウス・キー�
 2. **手机端：安装 spacedesk 应用**——“spacedesk - USB display for PC”
    （iPhone / Android）。
 3. **PC 和手机连接到同一个 Wi‑Fi。**
-4. **使用“扩展(Extend)”模式，不要用“复制(Duplicate)”。** ⚠ 复制模式下
-   无法操作画面。请在 Windows 设置 → 系统 → 显示 中确认有两个（扩展）显示器。
+4. **把显示设为“扩展”。** 手机连接后，右键点击桌面 → **“显示设置”** →
+   在 **“多显示器”** 中选择 **“扩展这些显示器”**。⚠ **不要**选
+   **“复制这些显示器”**——复制模式下无法操作画面。
+   （快捷方式：**Windows 键 + P** → **“扩展”**。）
 5. 在 spacedesk 中连接手机使扩展显示器生效，然后启动本程序：手机变成
    VR（左右并排）画面，可一边观看一边正常操作 PC。
 6. **需要一个手机 VR 头显。** 推荐（截至 2026 年 5 月）：Amazon 日本
@@ -67,9 +71,11 @@ spacedeskの**拡張**ディスプレイへ表示。実際のマウス・キー�
 2. **スマホ側：spacedesk アプリ**「spacedesk - USB display for PC」
    （iPhone / Android）をインストール。
 3. **PCとスマホを同じ Wi‑Fi に接続。**
-4. **必ず「拡張(Extend)」モード。「複製(Duplicate)」は不可。** ⚠ 複製だと
-   画面操作ができません。Windows 設定 → システム → ディスプレイで
-   2つ（拡張）になっていることを確認。
+4. **ディスプレイを「拡張」にする。** スマホ接続後、デスクトップを
+   右クリック → **「ディスプレイ設定」** → **「マルチ ディスプレイ」**
+   で **「表示画面を拡張する」** を選びます。⚠ **「表示画面を複製する」
+   は選ばないでください** — 複製だと画面操作ができません。
+   （簡単な方法：**Windowsキー + P** → **「拡張」**。）
 5. spacedeskでスマホを接続し拡張ディスプレイが出た状態で本アプリを起動 →
    スマホがVR（左右2画面）になり、見ながらPCを普通に操作できます。
 6. **スマホ用VRゴーグルが必要です。** おすすめ（2026年5月時点）：
