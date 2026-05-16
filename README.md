@@ -107,6 +107,12 @@ shipped). Building from source needs the
 自動生成されます（マシン固有情報は同梱しません）。ソースからのビルドには
 [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) が必要です。
 
+> 🎬 **Tip:** for a great first impression, watch a **4K video**
+> full‑screen on the VR big screen — e.g.
+> https://www.youtube.com/watch?v=Pt_2nw6vv1k&t=2589s /
+> 推荐全屏观看 **4K 视频**感受效果 /
+> **4K動画**を全画面で観るのがおすすめ
+
 ---
 
 ## 3. Controls / 操作 / 操作

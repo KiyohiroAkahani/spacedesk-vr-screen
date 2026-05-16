@@ -223,6 +223,23 @@ Wi‑Fi**につなげる環境。
 
 ---
 
+## Step 6. Recommended: enjoy a 4K video / 推荐：观看 4K 视频 / おすすめ：4K動画を観る
+
+**English** — For a great first impression, open a **high‑resolution
+(4K) video** full‑screen and watch it on the VR big screen. A nice
+example to try:
+https://www.youtube.com/watch?v=Pt_2nw6vv1k&t=2589s
+
+**中文** — 想获得惊艳的第一印象，建议**全屏播放高分辨率（4K）视频**，
+在 VR 大屏幕上观看。可试试这个示例：
+https://www.youtube.com/watch?v=Pt_2nw6vv1k&t=2589s
+
+**日本語** — 最初の感動を味わうなら、**高解像度（4K）の動画**を全画面で
+再生し、VRの大画面で観るのがおすすめです。お試し例：
+https://www.youtube.com/watch?v=Pt_2nw6vv1k&t=2589s
+
+---
+
 ## If something goes wrong / 出现问题时 / うまくいかないとき
 
 **English** — Most problems are the display mode. Re‑check Step 3:
