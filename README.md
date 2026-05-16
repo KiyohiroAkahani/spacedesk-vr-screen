@@ -19,6 +19,9 @@ spacedeskの**拡張**ディスプレイへ表示。実際のマウス・キー�
 > 仅限 Windows 10/11，无头部追踪（固定 VR 画面）。/
 > Windows 10/11 専用・ヘッドトラッキングなし（固定大画面）。
 
+📘 **Step‑by‑step setup → [`docs/SETUP_GUIDE.md`](docs/SETUP_GUIDE.md)**
+（分步设置指南 / 手順ガイド・英中日）
+
 ---
 
 ## 1. Prerequisites / 前置准备 / 必要な準備
@@ -37,6 +40,9 @@ spacedeskの**拡張**ディスプレイへ表示。実際のマウス・キー�
 5. Connect the phone in spacedesk so the extended display is active.
    Then start this app: the phone becomes a VR (side‑by‑side) screen and
    you can use the PC normally while watching it.
+6. **A phone VR goggle is required.** Recommended (as of May 2026):
+   the SHREVNI phone VR goggle on Amazon Japan —
+   https://www.amazon.co.jp/dp/B0FP5M4L6B/
 
 **中文**
 1. **PC 端：安装 spacedesk Driver / Server（Console）**，从官网下载：
@@ -49,6 +55,9 @@ spacedeskの**拡張**ディスプレイへ表示。実際のマウス・キー�
    无法操作画面。请在 Windows 设置 → 系统 → 显示 中确认有两个（扩展）显示器。
 5. 在 spacedesk 中连接手机使扩展显示器生效，然后启动本程序：手机变成
    VR（左右并排）画面，可一边观看一边正常操作 PC。
+6. **需要一个手机 VR 头显。** 推荐（截至 2026 年 5 月）：Amazon 日本
+   在售的 SHREVNI 手机 VR 头显 —
+   https://www.amazon.co.jp/dp/B0FP5M4L6B/
 
 **日本語**
 1. **PC側：spacedesk Driver / Server（Console）をインストール**（公式）：
@@ -63,6 +72,9 @@ spacedeskの**拡張**ディスプレイへ表示。実際のマウス・キー�
    2つ（拡張）になっていることを確認。
 5. spacedeskでスマホを接続し拡張ディスプレイが出た状態で本アプリを起動 →
    スマホがVR（左右2画面）になり、見ながらPCを普通に操作できます。
+6. **スマホ用VRゴーグルが必要です。** おすすめ（2026年5月時点）：
+   Amazon の SHREVNI スマホ用VRゴーグル —
+   https://www.amazon.co.jp/dp/B0FP5M4L6B/
 
 ---
 
