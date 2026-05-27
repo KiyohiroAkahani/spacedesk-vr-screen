@@ -123,9 +123,9 @@ float4 PSG(VSOut i) : SV_Target
     private int _cursorVersion = -1;
 
     // First-run guide labels (built once on first shown frame).
-    private ID3D11Texture2D? _guideLTex, _guideRTex;
-    private ID3D11ShaderResourceView? _guideLSrv, _guideRSrv;
-    private int _guideLW, _guideLH, _guideRW, _guideRH;
+    private ID3D11Texture2D? _guideLTex, _guideRTex, _guideCTex;
+    private ID3D11ShaderResourceView? _guideLSrv, _guideRSrv, _guideCSrv;
+    private int _guideLW, _guideLH, _guideRW, _guideRH, _guideCW, _guideCH;
     private bool _guideBuilt;
 
     private ID3D11PixelShader _psGuide = null!;
@@ -426,9 +426,12 @@ float4 PSG(VSOut i) : SV_Target
         try
         {
             var l = GuideLabel.Build("END", "[Esc → Esc]");
+            var c = GuideLabel.Build("CENTER", "[Ctrl+Alt+Shift+←/→]");
             var r = GuideLabel.Build("ZOOM", "[Ctrl+Alt+Shift+↑/↓]");
             (_guideLTex, _guideLSrv) = CreateBgraTexture(l.Pixels, l.Width, l.Height);
             _guideLW = l.Width; _guideLH = l.Height;
+            (_guideCTex, _guideCSrv) = CreateBgraTexture(c.Pixels, c.Width, c.Height);
+            _guideCW = c.Width; _guideCH = c.Height;
             (_guideRTex, _guideRSrv) = CreateBgraTexture(r.Pixels, r.Width, r.Height);
             _guideRW = r.Width; _guideRH = r.Height;
         }
@@ -444,8 +447,7 @@ float4 PSG(VSOut i) : SV_Target
         if (_guideLSrv is null || _guideRSrv is null) return;
 
         // ~3x larger than before; placed near the TOP, horizontally
-        // centred at 1/4 and 3/4 of the eye (midway between the eye
-        // centre and each edge).
+        // centred at 1/4, 1/2 and 3/4 of the eye (END / CENTER / ZOOM).
         float top = e.Y + e.Height * 0.04f;
         float gh = Math.Clamp(e.Height * 0.15f, 42f, 220f);
 
@@ -455,6 +457,16 @@ float4 PSG(VSOut i) : SV_Target
         _ctx.PSSetShaderResource(0, _guideLSrv);
         _ctx.RSSetViewport(new Viewport(lx, top, lw, gh, 0f, 1f));
         _ctx.Draw(3, 0);
+
+        if (_guideCSrv is not null)
+        {
+            float cw = _guideCW * (gh / _guideCH);
+            float cx = e.X + e.Width * 0.5f - cw * 0.5f;
+            cx = Math.Clamp(cx, e.X, e.X + e.Width - cw);
+            _ctx.PSSetShaderResource(0, _guideCSrv);
+            _ctx.RSSetViewport(new Viewport(cx, top, cw, gh, 0f, 1f));
+            _ctx.Draw(3, 0);
+        }
 
         float rw = _guideRW * (gh / _guideRH);
         float rx = e.X + e.Width * 0.75f - rw * 0.5f;
@@ -619,6 +631,8 @@ float4 PSG(VSOut i) : SV_Target
             _cursorSrv?.Dispose();
             _cursorTex?.Dispose();
             _guideLSrv?.Dispose();
+            _guideCSrv?.Dispose();
+            _guideCTex?.Dispose();
             _guideLTex?.Dispose();
             _guideRSrv?.Dispose();
             _guideRTex?.Dispose();

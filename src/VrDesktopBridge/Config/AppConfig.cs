@@ -48,7 +48,7 @@ public sealed class AppConfig
     /// Positive = shift each eye's content TOWARD the centre seam (narrower
     /// inter-image distance, for users whose IPD/lens spacing is narrower
     /// than the phone's half-width — fixes "one eye out of focus" symptoms).
-    /// Tune at runtime with Ctrl+Alt+Shift+I (narrower) / O (wider).
+    /// Tune at runtime with Ctrl+Alt+Shift+→ (narrower) / ← (wider).
     /// </summary>
     public int IpdShiftPercent { get; set; } = 0;
 

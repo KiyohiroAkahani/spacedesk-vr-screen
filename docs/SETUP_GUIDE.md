@@ -200,6 +200,8 @@ Wi‑Fi**につなげる環境。
 **English**
 - **Quit:** tap **Esc twice quickly** (or `Ctrl+Alt+Shift+Q`).
 - **Zoom in / out:** `Ctrl+Alt+Shift+↑ / ↓`.
+- **IPD narrower / wider:** `Ctrl+Alt+Shift+→ / ←` (use if one eye won't
+  focus together with the other).
 - If a window you open seems missing, it is automatically pulled back
   into view; you can toggle this with `Ctrl+Alt+Shift+W`.
 - Full key list, settings (`%LOCALAPPDATA%\VrDesktopBridge\config.json`)
@@ -208,6 +210,7 @@ Wi‑Fi**につなげる環境。
 **中文**
 - **退出：** 快速按 **两次 Esc**（或 `Ctrl+Alt+Shift+Q`）。
 - **缩放：** `Ctrl+Alt+Shift+↑ / ↓`。
+- **双眼像距 窄/宽：** `Ctrl+Alt+Shift+→ / ←`（如有单眼无法对焦时调整）。
 - 若打开的窗口好像不见了，它会被自动拉回可见区域；可用
   `Ctrl+Alt+Shift+W` 切换此功能。
 - 完整按键、设置（`%LOCALAPPDATA%\VrDesktopBridge\config.json`）与
@@ -216,6 +219,8 @@ Wi‑Fi**につなげる環境。
 **日本語**
 - **終了：** **Esc を素早く2回**（または `Ctrl+Alt+Shift+Q`）。
 - **拡大／縮小：** `Ctrl+Alt+Shift+↑ / ↓`。
+- **左右像中心を狭める／広げる：** `Ctrl+Alt+Shift+→ / ←`
+  （両眼同時にピントが合わない時に調整）。
 - 開いたウィンドウが見当たらないときは自動で見える位置へ戻ります。
   `Ctrl+Alt+Shift+W` でON/OFF切替できます。
 - 全キー・設定（`%LOCALAPPDATA%\VrDesktopBridge\config.json`）・

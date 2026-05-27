@@ -131,6 +131,7 @@ A short on‑screen guide appears at the top of each eye at startup.
 | **Esc ×2 (double‑tap)** | Quit — 退出 — 終了 |
 | `Ctrl+Alt+Shift+Q` | Quit — 退出 — 終了 |
 | `Ctrl+Alt+Shift+↑ / ↓` | Zoom in / out — 放大/缩小 — 拡大/縮小 (50–150%, start 80%) |
+| `Ctrl+Alt+Shift+→ / ←` | IPD narrower / wider — 调整双眼像距 — 左右像中心の狭め/広げ (両眼のピントを合わせる) |
 | `Ctrl+Alt+Shift+S` | Scale preset cycle — 缩放预设循环 — 縮尺巡回 (100→90→80→70) |
 | `Ctrl+Alt+Shift+V` | VR lens distortion on/off — VR畸变校正开关 — 歪み補正 ON/OFF |
 | `Ctrl+Alt+Shift+C` | Confine mouse to mirror — 鼠标限制在镜像内 — マウス拘束 ON/OFF |

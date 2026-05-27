@@ -273,9 +273,11 @@ py -3 .\tools\run_app.py --no-build
   へシフト（両者を必ず一致させる。ずれると更に悪化）。Pass 1のシフト後は
   左目を `[0, half]`／右目を `[half, _width]` 内に Clamp（隣接眼の内容を
   サンプルしないため）。`AppConfig.IpdShiftPercent`（既定 **0 = 既存
-  互換**）。`Ctrl+Alt+Shift+I`（Inward=狭める, +1%）/`O`（Outward=広げる,
-  -1%）でリアルタイム調整、ログ `[INFO] IpdShift=NN%`。決まった値は
-  config.json の `IpdShiftPercent` で永続化。
+  互換**）。**`Ctrl+Alt+Shift+→`（Narrower=狭める, +1%）/`←`（Wider=広げる,
+  -1%）**でリアルタイム調整、ログ `[INFO] IpdShift=NN%`。決まった値は
+  config.json の `IpdShiftPercent` で永続化。ContentScale 非依存
+  （`dx = IpdShift * half` は scene 全幅基準）。各眼上部に **END /
+  CENTER / ZOOM** の3バッジで操作キーをガイド表示。
 - 起動時既定縮尺 = **80%**（`AppConfig.StartupScalePercent` 既定80、
   50-150でクランプ、`config.json` で変更可）。初期 `_scaleIdx=-1` で
   Up/Down はこの起点から増減。起動ログ `ScreenScale=90% (startup)`。

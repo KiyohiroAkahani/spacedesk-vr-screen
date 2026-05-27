@@ -73,8 +73,8 @@ public partial class MainWindow : Window
     private const uint MOD_ALT = 0x1, MOD_CONTROL = 0x2, MOD_SHIFT = 0x4;
     private const uint VK_Q = 0x51, VK_F = 0x46, VK_A = 0x41, VK_C = 0x43,
                        VK_D = 0x44, VK_H = 0x48, VK_V = 0x56, VK_S = 0x53,
-                       VK_UP = 0x26, VK_DOWN = 0x28, VK_W = 0x57,
-                       VK_I = 0x49, VK_O = 0x4F;
+                       VK_LEFT = 0x25, VK_UP = 0x26, VK_RIGHT = 0x27,
+                       VK_DOWN = 0x28, VK_W = 0x57;
     private const int HK_QUIT = 1, HK_CYCLE = 2, HK_AFFINITY = 3,
                       HK_CLIP = 4, HK_REDETECT = 5, HK_HIDECURSOR = 6,
                       HK_DISTORT = 7, HK_SCALE = 8,
@@ -248,14 +248,14 @@ public partial class MainWindow : Window
             RegisterHotKey(hwnd, HK_SCALE_UP, mods, VK_UP) &
             RegisterHotKey(hwnd, HK_SCALE_DOWN, mods, VK_DOWN) &
             RegisterHotKey(hwnd, HK_WRANGLE, mods, VK_W) &
-            RegisterHotKey(hwnd, HK_IPD_IN, mods, VK_I) &
-            RegisterHotKey(hwnd, HK_IPD_OUT, mods, VK_O);
+            RegisterHotKey(hwnd, HK_IPD_IN, mods, VK_RIGHT) &
+            RegisterHotKey(hwnd, HK_IPD_OUT, mods, VK_LEFT);
         Console.Error.WriteLine(ok
             ? "[INFO] Global hotkeys: Ctrl+Alt+Shift+ Q=quit F=cycle-monitor "
               + "A=capture-exclude C=confine-cursor D=re-detect-displays "
               + "H=hide-real-cursor V=vr-distortion S=scale-cycle "
               + "Up=enlarge Down=shrink W=keep-windows "
-              + "I=ipd-narrower O=ipd-wider. (Terminal Ctrl+C quits.)"
+              + "Right=ipd-narrower Left=ipd-wider. (Terminal Ctrl+C quits.)"
             : $"[WARN] RegisterHotKey failed (Win32 {Marshal.GetLastWin32Error()}). "
               + "Use terminal Ctrl+C to quit.");
     }
@@ -554,7 +554,7 @@ public partial class MainWindow : Window
             _renderer.IpdShift = _config.IpdShift;
             Console.Error.WriteLine(
                 $"[INFO] IpdShift={(int)Math.Round(_renderer.IpdShift * 100)}% "
-                + "(startup). Ctrl+Alt+Shift+I/O = narrower/wider.");
+                + "(startup). Ctrl+Alt+Shift+→/← = narrower/wider.");
             _initialized = true;
             // Duplicate/mirror mode: hide the confusing real cursor and
             // draw a fixed arrow at the (content-correct) composited spot.
@@ -688,10 +688,10 @@ public partial class MainWindow : Window
                 Console.Error.WriteLine(
                     $"[INFO] KeepWindowsOnCapture={_keepWindowsOnCapture}");
                 break;
-            case Key.I:
+            case Key.Right:
                 ShiftIpdBy(+IpdStepAmt);
                 break;
-            case Key.O:
+            case Key.Left:
                 ShiftIpdBy(-IpdStepAmt);
                 break;
         }
