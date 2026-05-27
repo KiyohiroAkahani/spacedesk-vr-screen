@@ -264,6 +264,18 @@ py -3 .\tools\run_app.py --no-build
   `AppConfig.KeepWindowsOnCapture` 既定true（複製/単一モニタ時は無効化）、
   `Ctrl+Alt+Shift+W` トグル。`[INFO] Moved stray window ...` ログで
   実際に迷子が起きていたか確認できる（原因切り分け兼用）。
+- **機能: IPD（水平レンズ中心）調整**: ユーザー報告「縮尺70%程度で両眼
+  同時にピントが合わない（片眼ずつ合わせても両眼にすると片方がずれる）」。
+  原因はSBSの**左右像中心が常に画面幅の半分**で、典型スマホでは~75mm＞
+  成人平均IPD~63mm のため両眼が外向きに発散して輻輳破綻。対策＝
+  `SbsRenderer.IpdShift`（眼ハーフ幅に対する比率、-15%〜+15%）で
+  **Pass 1の各眼Fit位置と Pass 2の `DistortCB.Cx` を協調的に**内側／外側
+  へシフト（両者を必ず一致させる。ずれると更に悪化）。Pass 1のシフト後は
+  左目を `[0, half]`／右目を `[half, _width]` 内に Clamp（隣接眼の内容を
+  サンプルしないため）。`AppConfig.IpdShiftPercent`（既定 **0 = 既存
+  互換**）。`Ctrl+Alt+Shift+I`（Inward=狭める, +1%）/`O`（Outward=広げる,
+  -1%）でリアルタイム調整、ログ `[INFO] IpdShift=NN%`。決まった値は
+  config.json の `IpdShiftPercent` で永続化。
 - 起動時既定縮尺 = **80%**（`AppConfig.StartupScalePercent` 既定80、
   50-150でクランプ、`config.json` で変更可）。初期 `_scaleIdx=-1` で
   Up/Down はこの起点から増減。起動ログ `ScreenScale=90% (startup)`。

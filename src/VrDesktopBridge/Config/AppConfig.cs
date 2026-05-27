@@ -44,6 +44,20 @@ public sealed class AppConfig
     public float DistortK2 { get; set; } = 0.10f;
 
     /// <summary>
+    /// Horizontal IPD shift, in percent of one eye's half-width (-15..+15).
+    /// Positive = shift each eye's content TOWARD the centre seam (narrower
+    /// inter-image distance, for users whose IPD/lens spacing is narrower
+    /// than the phone's half-width — fixes "one eye out of focus" symptoms).
+    /// Tune at runtime with Ctrl+Alt+Shift+I (narrower) / O (wider).
+    /// </summary>
+    public int IpdShiftPercent { get; set; } = 0;
+
+    public float IpdShift =>
+        (IpdShiftPercent < -15 ? -15
+            : IpdShiftPercent > 15 ? 15
+            : IpdShiftPercent) / 100f;
+
+    /// <summary>
     /// SBS image size at startup, in percent (50–150). Default 80%.
     /// Ctrl+Alt+Shift+Up/Down then steps from here.
     /// </summary>

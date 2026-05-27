@@ -103,6 +103,15 @@ float4 PSG(VSOut i) : SV_Target
     public float K1 { get; set; } = 0.22f;
     public float K2 { get; set; } = 0.10f;
 
+    /// <summary>
+    /// Horizontal IPD shift as a fraction of one eye's half-width
+    /// (-0.15..+0.15). Positive shifts both eyes' content (and the
+    /// distortion lens-centre) TOWARD the centre seam — narrowing the
+    /// inter-image distance so it matches the user's IPD / lens spacing.
+    /// 0 = current behaviour (geometric half-centres).
+    /// </summary>
+    public float IpdShift { get; set; } = 0f;
+
     private DesktopDuplicator _dupl = null!;
     private ID3D11Texture2D? _frameTex;
     private ID3D11ShaderResourceView? _frameSrv;
@@ -507,6 +516,23 @@ float4 PSG(VSOut i) : SV_Target
                     w, h, 0f, 1f);
             }
 
+        // IPD shift: pull each eye's content TOWARD the centre seam by
+        // (IpdShift * half) pixels. Pass 2 lensCenter is shifted by the
+        // same amount so distortion stays centred on the new content.
+        // Clamp inside each half so we never bleed across the seam.
+        if (sbs && IpdShift != 0f)
+        {
+            float dx = IpdShift * half;
+            // Left eye: shift right (toward seam), clamp into [0, half].
+            var l = eyes[0];
+            float lx = Math.Clamp(l.X + dx, 0f, half - l.Width);
+            eyes[0] = new Viewport(lx, l.Y, l.Width, l.Height, 0f, 1f);
+            // Right eye: shift left (toward seam), clamp into [half, _width].
+            var r = eyes[1];
+            float rx = Math.Clamp(r.X - dx, half, _width - r.Width);
+            eyes[1] = new Viewport(rx, r.Y, r.Width, r.Height, 0f, 1f);
+        }
+
         _ctx.OMSetBlendState(null);
         _ctx.PSSetShaderResource(0, _frameSrv!);
         for (int i = 0; i < eyeCount; i++)
@@ -568,9 +594,12 @@ float4 PSG(VSOut i) : SV_Target
                 vp = new Viewport(half, 0, _width - half, _height, 0f, 1f);
             }
 
+            // Lens centre matches the IPD-shifted content centre.
+            float cx = 0.5f;
+            if (sbs) cx = (i == 0) ? 0.5f + IpdShift : 0.5f - IpdShift;
             var cb = new DistortCB
             {
-                Cx = 0.5f, Cy = 0.5f,
+                Cx = cx, Cy = 0.5f,
                 UOff = uOff, UScale = uScale,
                 K1 = K1, K2 = K2, En = en, Pad = 0f,
             };

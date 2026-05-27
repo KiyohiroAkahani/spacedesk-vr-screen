@@ -73,11 +73,14 @@ public partial class MainWindow : Window
     private const uint MOD_ALT = 0x1, MOD_CONTROL = 0x2, MOD_SHIFT = 0x4;
     private const uint VK_Q = 0x51, VK_F = 0x46, VK_A = 0x41, VK_C = 0x43,
                        VK_D = 0x44, VK_H = 0x48, VK_V = 0x56, VK_S = 0x53,
-                       VK_UP = 0x26, VK_DOWN = 0x28, VK_W = 0x57;
+                       VK_UP = 0x26, VK_DOWN = 0x28, VK_W = 0x57,
+                       VK_I = 0x49, VK_O = 0x4F;
     private const int HK_QUIT = 1, HK_CYCLE = 2, HK_AFFINITY = 3,
                       HK_CLIP = 4, HK_REDETECT = 5, HK_HIDECURSOR = 6,
                       HK_DISTORT = 7, HK_SCALE = 8,
-                      HK_SCALE_UP = 9, HK_SCALE_DOWN = 10, HK_WRANGLE = 11;
+                      HK_SCALE_UP = 9, HK_SCALE_DOWN = 10, HK_WRANGLE = 11,
+                      HK_IPD_IN = 12, HK_IPD_OUT = 13;
+    private const float IpdMin = -0.15f, IpdMax = 0.15f, IpdStepAmt = 0.01f;
     private const float ScaleMin = 0.5f, ScaleMax = 1.5f, ScaleStepAmt = 0.1f;
 
     private static readonly float[] ScaleSteps = { 1.0f, 0.9f, 0.8f, 0.7f };
@@ -244,12 +247,15 @@ public partial class MainWindow : Window
             RegisterHotKey(hwnd, HK_SCALE, mods, VK_S) &
             RegisterHotKey(hwnd, HK_SCALE_UP, mods, VK_UP) &
             RegisterHotKey(hwnd, HK_SCALE_DOWN, mods, VK_DOWN) &
-            RegisterHotKey(hwnd, HK_WRANGLE, mods, VK_W);
+            RegisterHotKey(hwnd, HK_WRANGLE, mods, VK_W) &
+            RegisterHotKey(hwnd, HK_IPD_IN, mods, VK_I) &
+            RegisterHotKey(hwnd, HK_IPD_OUT, mods, VK_O);
         Console.Error.WriteLine(ok
             ? "[INFO] Global hotkeys: Ctrl+Alt+Shift+ Q=quit F=cycle-monitor "
               + "A=capture-exclude C=confine-cursor D=re-detect-displays "
               + "H=hide-real-cursor V=vr-distortion S=scale-cycle "
-              + "Up=enlarge Down=shrink W=keep-windows. (Terminal Ctrl+C quits.)"
+              + "Up=enlarge Down=shrink W=keep-windows "
+              + "I=ipd-narrower O=ipd-wider. (Terminal Ctrl+C quits.)"
             : $"[WARN] RegisterHotKey failed (Win32 {Marshal.GetLastWin32Error()}). "
               + "Use terminal Ctrl+C to quit.");
     }
@@ -459,8 +465,27 @@ public partial class MainWindow : Window
                 Console.Error.WriteLine(
                     $"[INFO] KeepWindowsOnCapture={_keepWindowsOnCapture}");
                 break;
+            case HK_IPD_IN:
+                handled = true;
+                ShiftIpdBy(+IpdStepAmt);
+                break;
+            case HK_IPD_OUT:
+                handled = true;
+                ShiftIpdBy(-IpdStepAmt);
+                break;
         }
         return IntPtr.Zero;
+    }
+
+    /// <summary>Step the per-eye IPD shift, clamped to [-15%, +15%].</summary>
+    private void ShiftIpdBy(float d)
+    {
+        float v = _renderer.IpdShift + d;
+        v = v < IpdMin ? IpdMin : (v > IpdMax ? IpdMax : v);
+        v = (float)Math.Round(v, 2);
+        _renderer.IpdShift = v;
+        Console.Error.WriteLine(
+            $"[INFO] IpdShift={(int)Math.Round(v * 100)}%");
     }
 
     /// <summary>Step the SBS scale by <paramref name="d"/>, clamped.</summary>
@@ -526,6 +551,10 @@ public partial class MainWindow : Window
             Console.Error.WriteLine(
                 $"[INFO] ScreenScale={(int)(_config.StartupScale * 100)}% "
                 + "(startup). Ctrl+Alt+Shift+Up/Down to change.");
+            _renderer.IpdShift = _config.IpdShift;
+            Console.Error.WriteLine(
+                $"[INFO] IpdShift={(int)Math.Round(_renderer.IpdShift * 100)}% "
+                + "(startup). Ctrl+Alt+Shift+I/O = narrower/wider.");
             _initialized = true;
             // Duplicate/mirror mode: hide the confusing real cursor and
             // draw a fixed arrow at the (content-correct) composited spot.
@@ -659,6 +688,12 @@ public partial class MainWindow : Window
                 Console.Error.WriteLine(
                     $"[INFO] KeepWindowsOnCapture={_keepWindowsOnCapture}");
                 break;
+            case Key.I:
+                ShiftIpdBy(+IpdStepAmt);
+                break;
+            case Key.O:
+                ShiftIpdBy(-IpdStepAmt);
+                break;
         }
     }
 
@@ -710,6 +745,8 @@ public partial class MainWindow : Window
             UnregisterHotKey(hwnd, HK_SCALE_UP);
             UnregisterHotKey(hwnd, HK_SCALE_DOWN);
             UnregisterHotKey(hwnd, HK_WRANGLE);
+            UnregisterHotKey(hwnd, HK_IPD_IN);
+            UnregisterHotKey(hwnd, HK_IPD_OUT);
         }
         _hwndSource?.RemoveHook(HotkeyHook);
         _hwndSource = null;
