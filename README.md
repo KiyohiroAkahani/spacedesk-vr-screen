@@ -131,7 +131,11 @@ A short on‑screen guide appears at the top of each eye at startup.
 | **Esc ×2 (double‑tap)** | Quit — 退出 — 終了 |
 | `Ctrl+Alt+Shift+Q` | Quit — 退出 — 終了 |
 | `Ctrl+Alt+Shift+↑ / ↓` | Zoom in / out — 放大/缩小 — 拡大/縮小 (50–150%, start 80%) |
-| `Ctrl+Alt+Shift+→ / ←` | IPD narrower / wider — 调整双眼像距 — 左右像中心の狭め/広げ (両眼のピントを合わせる) |
+| `Ctrl+Alt+Shift+→ / ←` | IPD narrower / wider, 0.5%/press — 双眼像距 窄/宽（每按 0.5%）— 左右像の間隔を狭め/広げ（0.5%/押・両眼のピント合わせの主役） |
+| `Ctrl+Alt+Shift+T` | Focus‑calibration test pattern on/off — 对焦校准测试图 开/关 — ピント調整用テストパターン ON/OFF |
+| `Ctrl+Alt+Shift+U / O` | Right‑eye image up / down, 0.25%/press — 右眼画面 上/下（每按 0.25%）— 右眼像を上/下（左右の高さズレ補正・0.25%/押） |
+| `Ctrl+Alt+Shift+I / K / J / L` | Nudge both eyes up/down/left/right, 0.5%/press — 双眼整体 上/下/左/右 微移 — 両眼まとめて上/下/左/右（スマホ置きズレ補正・0.5%/押） |
+| `Ctrl+Alt+Shift+B / N` | Screen curvature stronger / weaker — 画面曲率 增强/减弱 — 曲面感（映画館感）を強く/弱く |
 | `Ctrl+Alt+Shift+S` | Scale preset cycle — 缩放预设循环 — 縮尺巡回 (100→90→80→70) |
 | `Ctrl+Alt+Shift+V` | VR lens distortion on/off — VR畸变校正开关 — 歪み補正 ON/OFF |
 | `Ctrl+Alt+Shift+C` | Confine mouse to mirror — 鼠标限制在镜像内 — マウス拘束 ON/OFF |
@@ -146,6 +150,79 @@ A short on‑screen guide appears at the top of each eye at startup.
 （强制停止）。/
 **日本語** — 端末からは `Ctrl+C`、または `py -3 .\tools\stop_app.py`
 でも確実に終了できます。
+
+### 🎯 When the goggle's own focus dial isn't enough / 头显物理调节不够时 / ゴーグルの物理調整だけではピントが合わない時
+
+**English** — If you have adjusted the goggle's lens spacing and focus
+depth and **still can't get both eyes sharp at the same time**, it is
+usually not your eyes — three mismatches live *inside the picture
+itself*, where no physical dial can reach:
+
+1. **Image spacing vs your eyes.** The two half‑images sit half a phone
+   apart (≈75 mm on a 6.5″ phone), but typical eye spacing is ≈63 mm.
+   Your eyes are forced outward — each eye is sharp alone, but never
+   both together.
+2. **Phone placement.** The phone never sits perfectly centred in the
+   tray; a few mm sideways or up/down shifts both images off the lens
+   centres.
+3. **Left/right height difference.** If one eye's image is even
+   ~0.3 mm higher than the other, the brain cannot fuse them. This one
+   is invisible, feels like "something is off", and is the most common
+   hidden culprit.
+
+The calibration keys move the *images* instead, and save the result to
+`config.json` automatically — you only do this once:
+
+1. `Ctrl+Alt+Shift+T` → test card (white cross = fusion target,
+   circles/grid = curvature, orange frame = image edge). Keep zoom at
+   70–80%.
+2. **Close one eye at a time.** Cross heights differ between eyes? →
+   `U` / `O` until they match. (Fixes culprit 3 — do this first.)
+3. **Both eyes open.** Seeing two crosses? → press `→` one step at a
+   time until they snap into one sharp cross. Feels too close /
+   overlapped? You went too far → back off with `←`. (Culprit 1)
+4. Cross not in the centre of your view? → `I/K/J/L`. (Culprit 2)
+5. Optional: `B` a few times for a more cinema‑like curved screen,
+   `N` to flatten. Then `T` to return to the desktop.
+
+**中文** — 如果已经调过头显的镜片间距和对焦深度，**双眼仍然无法同时清晰**，
+通常不是你眼睛的问题——有三种偏差藏在*画面内部*，物理旋钮够不到：
+①左右半屏中心相距约半个手机宽（6.5″ 手机约 75 mm），而人眼瞳距约 63 mm，
+双眼被迫向外，单眼清晰、双眼不行；②手机在支架里总有几毫米的偏移；
+③左右眼画面哪怕只差 ~0.3 mm 的高度，大脑也无法融像（最隐蔽、最常见）。
+校准键直接移动*画面*来解决，并自动保存到 `config.json`，只需做一次：
+按 `Ctrl+Alt+Shift+T` 显示测试图（缩放保持 70–80%）→ ②轮流闭上单眼，
+十字高度不同就按 `U`/`O` 调到一致 → ③双眼看到两个十字就逐步按 `→`
+直到合成一个清晰十字（感觉太近/重叠=按过头，用 `←` 退回）→
+④十字不在视野中心用 `I/K/J/L` → ⑤可选：`B`/`N` 调整影院曲面感。
+
+**日本語** — ゴーグル側のレンズ間隔・奥行きを調整しても**両眼同時には
+ピントが合いきらない**場合、それは目のせいではありません。物理ダイヤルでは
+届かない「映像の中」に、3つのズレが潜んでいます：
+
+1. **左右像の間隔 vs あなたの瞳孔間距離。** 左右の像はスマホ半分
+   （6.5型で約75mm）離れて表示されますが、人の瞳孔間距離は平均約63mm。
+   目が外向きに引っ張られ、「片眼ずつなら合うのに両眼だと合わない」
+   状態になります。
+2. **スマホの置きズレ。** トレイ内で数mm横や上下にズレるだけで、
+   両像がレンズ中心から外れます。
+3. **左右の高さの差。** 左右の像の高さが**わずか0.3mm**違うだけで
+   脳は像を融合できません。目に見えず「なんか合わない」だけが残る、
+   一番見落とされがちな犯人です。
+
+キャリブレーションキーは映像のほうを動かしてこれを解決し、結果は
+`config.json` に自動保存されます（一度合わせれば次回からそのまま）：
+
+1. `Ctrl+Alt+Shift+T` でテストパターン表示（白十字=融像ターゲット、
+   同心円/グリッド=曲率、橙枠=画面端）。縮尺は70〜80%のまま。
+2. **片眼ずつ交互に閉じる。** 十字の高さが左右で違えば `U`/`O` で
+   一致させる（犯人3。**最初に**やるのがコツ）。
+3. **両眼で見る。** 十字が二重なら `→` を1押しずつ、1つのシャープな
+   十字に重なった時点で止める（近すぎ/重なりすぎと感じたら押し過ぎ。
+   `←` で戻す）（犯人1）。
+4. 十字が視野の中央に来ていなければ `I/K/J/L`（犯人2）。
+5. お好みで `B` を数回押すと映画館のような曲面感が強まります
+   （`N` で弱く）。終わったら `T` でデスクトップに戻る。
 
 ---
 
@@ -163,7 +240,10 @@ A short on‑screen guide appears at the top of each eye at startup.
 | `TargetMonitorMatch` | `"spacedesk"` | Which monitor to display on / 显示到哪个显示器 / 表示先モニタ |
 | `StartupScalePercent` | `80` | Startup zoom % / 启动缩放% / 起動時縮尺% |
 | `LensDistortion` | `true` | VR lens correction / VR畸变校正 / レンズ歪み補正 |
-| `DistortK1` / `DistortK2` | `0.22` / `0.10` | Distortion coefficients (tune per viewer) / 畸变系数（按头显调整）/ 歪み係数（ゴーグルに合わせ調整） |
+| `DistortK1` / `DistortK2` | `0.22` / `0.10` | Distortion coefficients (B/N keys, auto‑saved) / 畸变系数（B/N 键调整并自动保存）/ 歪み係数（B/N キーで調整・自動保存） |
+| `IpdShiftPercent` | `0` | Image‑pair spacing (auto‑saved by →/←) / 双眼像距（→/← 自动保存）/ 左右像の間隔（→/← で自動保存） |
+| `OffsetXPercent` / `OffsetYPercent` | `0` | Both‑eyes view nudge (I/K/J/L) / 双眼整体微移 / 両眼共通ナッジ（I/K/J/L） |
+| `EyeYDiffPercent` | `0` | Right‑vs‑left height diff (U/O) / 左右眼高度差 / 右眼像と左眼像の高さ差（U/O） |
 | `ConfineCursor` | `true` | Keep mouse on the mirrored monitor / 鼠标限制在镜像显示器 / マウス拘束 |
 | `KeepWindowsOnCapture` | `true` | Pull stray windows back into view / 把跑掉的窗口拉回 / 迷子ウィンドウ回収 |
 | `Fps` | `60` | Frame cap / 帧率上限 / 描画上限 |
@@ -186,6 +266,7 @@ that needs no .NET on the target — attach it to a GitHub Release. /
 py -3 .\tools\clean_build.py     # clean build / 干净编译 / クリーンビルド
 py -3 .\tools\run_app.py         # run (dev) / 运行(开发) / 起動(開発)
 py -3 .\tools\publish_app.py     # make dist\VrDesktopBridge.exe
+py -3 .\tools\smoke_test.py      # build + 6s run health check / 构建+运行体检 / ビルド+起動ヘルスチェック
 py -3 .\tools\stop_app.py        # force stop / 强制停止 / 確実に停止
 ```
 
@@ -222,6 +303,9 @@ Direct3D 11——左右并排 + 保持纵横比 + 桶形镜片畸变着色器 + 
 **English**
 - Nothing on the phone / can't operate → ensure spacedesk is in
   **Extend** (not Duplicate); press `Ctrl+Alt+Shift+D` to re‑detect.
+- Both eyes never sharp at the same time / double image → use the
+  built‑in **focus calibration** (see *Controls*): `Ctrl+Alt+Shift+T`,
+  then the 5 steps.
 - A folder/window you opened is invisible/unclickable → it is pulled
   back automatically by default (`Ctrl+Alt+Shift+W` toggles this).
 - Looks distorted in VR → toggle `Ctrl+Alt+Shift+V` to compare; tune
@@ -234,6 +318,8 @@ Direct3D 11——左右并排 + 保持纵横比 + 桶形镜片畸变着色器 + 
 **中文**
 - 手机无画面 / 无法操作 → 确认 spacedesk 为**扩展**（非复制）；按
   `Ctrl+Alt+Shift+D` 重新检测。
+- 双眼无法同时清晰 / 画面重影 → 使用内置**对焦校准**（见“操作”一节）：
+  按 `Ctrl+Alt+Shift+T`，照 5 步操作。
 - 打开的文件夹/窗口看不见、点不到 → 默认会自动拉回（`Ctrl+Alt+Shift+W`
   开关）。
 - VR 中画面变形 → 用 `Ctrl+Alt+Shift+V` 对比开关；按头显调整 `config.json`
@@ -245,6 +331,9 @@ Direct3D 11——左右并排 + 保持纵横比 + 桶形镜片畸变着色器 + 
 **日本語**
 - スマホに何も出ない/操作できない → spacedesk が**拡張**か確認（複製は
   不可）。`Ctrl+Alt+Shift+D` で再検出。
+- 両眼同時にピントが合わない・像が二重になる → 内蔵の
+  **ピント調整**（上記「操作」セクション参照）。`Ctrl+Alt+Shift+T` →
+  5ステップで一度合わせれば自動保存されます。
 - 開いたフォルダ/ウィンドウが見えない・触れない → 既定で自動的に戻します
   （`Ctrl+Alt+Shift+W` でON/OFF）。
 - VRで歪む → `Ctrl+Alt+Shift+V` で比較し、`config.json` の `DistortK1/K2`
