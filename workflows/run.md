@@ -51,7 +51,7 @@ py -3 .\tools\run_app.py --no-build
   WGC は黄色キャプチャ枠が出る・WinRT `IGraphicsCaptureItemInterop` の
   COM相互運用が脆い。よって **DXGI Desktop Duplication（Vortice）** を採用。
   枠無し・相互運用不要。制約: キャプチャ用D3D11デバイスは出力と同一GPU
-  （本機は1台なので問題なし）。
+  （GPU 1台構成なら問題なし）。
 - **Vortice 3.6.2 の正確なAPI**（推測厳禁。`.tmp/probe` 反射プローブで確定）:
   - `D3D11.D3D11CreateDevice(IDXGIAdapter adapter, DriverType, DeviceCreationFlags,
     FeatureLevel[] featureLevels, out ID3D11Device, out ID3D11DeviceContext)`
@@ -69,11 +69,11 @@ py -3 .\tools\run_app.py --no-build
 - **GUI起動の検証手法**（run_app.py はブロックするので非対話環境では使えない）:
   `Start-Process exe -PassThru -RedirectStandardError`→`Start-Sleep 8`→
   `HasExited`/`CloseMainWindow`/`Kill`。stderr 無し＝起動クラッシュ無し。
-- M2/M3 検証済み: MonitorPicker は本機を `\\.\DISPLAY1 "Generic PnP Monitor"
-  <解像度> primary` と列挙。spacedesk 未接続時は target がプライマリに
+- M2/M3 検証済み: MonitorPicker はプライマリを `\\.\DISPLAY1 "<モニタ名>"
+  <解像度> primary` のように列挙。spacedesk 未接続時は target がプライマリに
   フォールバック→再帰警告＋`ExcludeFromCapture=True` 自動適用、
   `SetWindowDisplayAffinity` は本 Win11(10.0.26200) で "applied" 成功。
-- **本機は現状シングルモニタ（<解像度>）・spacedesk 未接続**。実VR確認には
+- **開発機がシングルモニタ・spacedesk 未接続の場合**、実VR確認には
   spacedesk を EXTEND モードで接続し、`config.json` の `TargetMonitorMatch`
   を "spacedesk"（既定）にして起動、ウィンドウが拡張ディスプレイへ載る。
 - **M5 操作透過＋アスペクト保持（実装済・ビルド緑・起動検証済）**:
@@ -154,7 +154,7 @@ py -3 .\tools\run_app.py --no-build
   が上書き(要 低レベルフック) / clampHits=0 のまま拡張へ→ cap 矩形誤り。
   ログは `.tmp/run_<日時>.log` と端末に出る。
 - **実機DIAG解析（2026-05-16）**: ユーザー実行ログは `[MON] 1 monitor`,
-  `cap=(0,0,<解像度>)`, 全カーソル座標がその矩形内, `clampHits=0`,
+  `cap=(0,0,<プライマリ解像度>)`, 全カーソル座標がその矩形内, `clampHits=0`,
   `Target monitor is PRIMARY` フォールバック。＝**spacedesk が拡張モニタ
   として列挙されていない**（未接続/Duplicateモード、または起動時1回きり
   列挙の後に接続）。クランプは正しく動くが拡張モニタが無いので無意味。
