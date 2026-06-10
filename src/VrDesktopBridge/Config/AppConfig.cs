@@ -48,14 +48,33 @@ public sealed class AppConfig
     /// Positive = shift each eye's content TOWARD the centre seam (narrower
     /// inter-image distance, for users whose IPD/lens spacing is narrower
     /// than the phone's half-width — fixes "one eye out of focus" symptoms).
-    /// Tune at runtime with Ctrl+Alt+Shift+→ (narrower) / ← (wider).
+    /// Tune at runtime with Ctrl+Alt+Shift+→ (narrower) / ← (wider);
+    /// changes are saved back here automatically (0.5%/press).
     /// </summary>
-    public int IpdShiftPercent { get; set; } = 0;
+    public float IpdShiftPercent { get; set; } = 0;
 
-    public float IpdShift =>
-        (IpdShiftPercent < -15 ? -15
-            : IpdShiftPercent > 15 ? 15
-            : IpdShiftPercent) / 100f;
+    public float IpdShift => Math.Clamp(IpdShiftPercent, -15f, 15f) / 100f;
+
+    /// <summary>
+    /// Common view offset for BOTH eyes: X in percent of one eye's
+    /// half-width (+ = right), Y in percent of the screen height
+    /// (+ = down). Compensates the phone sitting off-centre in the
+    /// goggle tray. Ctrl+Alt+Shift+J/L (X) and I/K (Y); auto-saved.
+    /// </summary>
+    public float OffsetXPercent { get; set; } = 0;
+    public float OffsetYPercent { get; set; } = 0;
+
+    /// <summary>
+    /// Vertical difference between the eyes, in percent of the screen
+    /// height (+ = right-eye image lower). Even ~0.3% breaks binocular
+    /// fusion ("each eye fine alone, together never locks").
+    /// Ctrl+Alt+Shift+U/O (0.25%/press); auto-saved.
+    /// </summary>
+    public float EyeYDiffPercent { get; set; } = 0;
+
+    public float OffsetX => Math.Clamp(OffsetXPercent, -10f, 10f) / 100f;
+    public float OffsetY => Math.Clamp(OffsetYPercent, -10f, 10f) / 100f;
+    public float EyeYDiff => Math.Clamp(EyeYDiffPercent, -5f, 5f) / 100f;
 
     /// <summary>
     /// SBS image size at startup, in percent (50–150). Default 80%.

@@ -67,6 +67,31 @@ float4 PSG(VSOut i) : SV_Target
     c.a *= saturate(gOpacity);
     return c;
 }
+
+// Calibration test pattern (no texture): grid + concentric circles +
+// centre cross/dot + content border, in content-rect UV. x is corrected
+// by the rect aspect so circles are round and the grid is square.
+cbuffer Q : register(b0) { float pAspect; float3 _qpad; };
+float4 PSP(VSOut i) : SV_Target
+{
+    float2 p = float2((i.uv.x - 0.5) * pAspect, i.uv.y - 0.5);
+    float  r = length(p);
+    float3 col = float3(0.05, 0.05, 0.07);                 // background
+    // square grid every 0.1 (distance to nearest multiple of 0.1)
+    float2 g = abs(frac(p / 0.1 + 0.5) - 0.5) * 0.1;
+    if (min(g.x, g.y) < 0.002) col = float3(0.0, 0.32, 0.08);
+    // concentric circles every r=0.15 around the lens-aligned centre
+    float dc = abs(frac(r / 0.15 + 0.5) - 0.5) * 0.15;
+    if (dc < 0.0025 && r > 0.05) col = float3(0.15, 0.75, 1.0);
+    // full-span centre cross + dot (binocular fusion target)
+    if (abs(p.x) < 0.003 || abs(p.y) < 0.003) col = float3(1.0, 1.0, 1.0);
+    if (r < 0.012) col = float3(1.0, 0.25, 0.2);
+    // content-rect border (reveals when a shift got clamped/eaten)
+    if (i.uv.x < 0.006 || i.uv.x > 0.994 ||
+        i.uv.y < 0.006 || i.uv.y > 0.994)
+        col = float3(1.0, 0.55, 0.1);
+    return float4(col, 1.0);
+}
 ";
 
     [System.Runtime.InteropServices.StructLayout(
@@ -81,6 +106,13 @@ float4 PSG(VSOut i) : SV_Target
     private struct DistortCB
     {
         public float Cx, Cy, UOff, UScale, K1, K2, En, Pad; // 32 bytes
+    }
+
+    [System.Runtime.InteropServices.StructLayout(
+        System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct PatternCB
+    {
+        public float Aspect, P0, P1, P2; // 16 bytes
     }
 
     private ID3D11Device _device = null!;
@@ -112,6 +144,31 @@ float4 PSG(VSOut i) : SV_Target
     /// </summary>
     public float IpdShift { get; set; } = 0f;
 
+    /// <summary>
+    /// Common view offset applied to BOTH eyes, as a fraction of one
+    /// eye's half-width (+ = right). Compensates the phone sitting
+    /// left/right of centre in the goggle tray (asymmetric eyes).
+    /// </summary>
+    public float OffsetX { get; set; } = 0f;
+
+    /// <summary>
+    /// Common vertical view offset for BOTH eyes, fraction of the
+    /// screen height (+ = down). Compensates the phone sitting
+    /// high/low relative to the lens centres.
+    /// </summary>
+    public float OffsetY { get; set; } = 0f;
+
+    /// <summary>
+    /// Vertical difference BETWEEN the eyes, fraction of the screen
+    /// height (+ = right-eye image lower / left-eye higher, split
+    /// half-and-half). Vertical disparity is the classic "each eye is
+    /// fine alone, together they never lock" fusion killer.
+    /// </summary>
+    public float EyeYDiff { get; set; } = 0f;
+
+    /// <summary>Show the calibration test pattern instead of the desktop.</summary>
+    public bool TestPattern { get; set; }
+
     private DesktopDuplicator _dupl = null!;
     private ID3D11Texture2D? _frameTex;
     private ID3D11ShaderResourceView? _frameSrv;
@@ -130,6 +187,9 @@ float4 PSG(VSOut i) : SV_Target
 
     private ID3D11PixelShader _psGuide = null!;
     private ID3D11Buffer _guideCb = null!;
+
+    private ID3D11PixelShader _psPattern = null!;
+    private ID3D11Buffer _patternCb = null!;
 
     /// <summary>Show the first-run operation guide (host controls timeout).</summary>
     public bool ShowGuide { get; set; } = true;
@@ -222,6 +282,12 @@ float4 PSG(VSOut i) : SV_Target
             CpuAccessFlags.None, ResourceOptionFlags.None, 0);
         _guideCb = _device.CreateBuffer(ref gcbDesc, IntPtr.Zero);
 
+        var pcbDesc = new BufferDescription(
+            (uint)System.Runtime.InteropServices.Marshal.SizeOf<PatternCB>(),
+            BindFlags.ConstantBuffer, ResourceUsage.Default,
+            CpuAccessFlags.None, ResourceOptionFlags.None, 0);
+        _patternCb = _device.CreateBuffer(ref pcbDesc, IntPtr.Zero);
+
         _dupl = new DesktopDuplicator(_device, outputIndex: 0);
         CreateFrameTexture();
         CreateSceneTarget();
@@ -267,10 +333,13 @@ float4 PSG(VSOut i) : SV_Target
             Compiler.Compile(ShaderSource, "PSD", "sbs.hlsl", "ps_5_0");
         ReadOnlyMemory<byte> psgCode =
             Compiler.Compile(ShaderSource, "PSG", "sbs.hlsl", "ps_5_0");
+        ReadOnlyMemory<byte> pspCode =
+            Compiler.Compile(ShaderSource, "PSP", "sbs.hlsl", "ps_5_0");
         _vs = _device.CreateVertexShader(vsCode.Span);
         _ps = _device.CreatePixelShader(psCode.Span);
         _psDistort = _device.CreatePixelShader(psdCode.Span);
         _psGuide = _device.CreatePixelShader(psgCode.Span);
+        _psPattern = _device.CreatePixelShader(pspCode.Span);
     }
 
     private void CreateFrameTexture()
@@ -528,36 +597,70 @@ float4 PSG(VSOut i) : SV_Target
                     w, h, 0f, 1f);
             }
 
-        // IPD shift: pull each eye's content TOWARD the centre seam by
-        // (IpdShift * half) pixels. Pass 2 lensCenter is shifted by the
-        // same amount so distortion stays centred on the new content.
-        // Clamp inside each half so we never bleed across the seam.
-        if (sbs && IpdShift != 0f)
+        // View shifts: IPD convergence (symmetric, toward the seam) +
+        // common X/Y offset (phone placement in the goggles) + per-eye
+        // vertical difference (vertical fusion). Clamp inside each half
+        // so we never bleed across the seam, and record the ACTUAL
+        // applied shift so the Pass 2 lens centre follows the content
+        // centre even when a shift gets clamped (M6 invariant).
+        Span<float> dxA = stackalloc float[2];
+        Span<float> dyA = stackalloc float[2];
+        dxA[0] = dxA[1] = dyA[0] = dyA[1] = 0f;
+        if (sbs)
         {
-            float dx = IpdShift * half;
-            // Left eye: shift right (toward seam), clamp into [0, half].
-            var l = eyes[0];
-            float lx = Math.Clamp(l.X + dx, 0f, half - l.Width);
-            eyes[0] = new Viewport(lx, l.Y, l.Width, l.Height, 0f, 1f);
-            // Right eye: shift left (toward seam), clamp into [half, _width].
-            var r = eyes[1];
-            float rx = Math.Clamp(r.X - dx, half, _width - r.Width);
-            eyes[1] = new Viewport(rx, r.Y, r.Width, r.Height, 0f, 1f);
+            for (int i = 0; i < 2; i++)
+            {
+                var v = eyes[i];
+                float dx = ((i == 0 ? +IpdShift : -IpdShift) + OffsetX) * half;
+                float dy = (OffsetY + (i == 0 ? -0.5f : +0.5f) * EyeYDiff)
+                           * _height;
+                float minX = i == 0 ? 0f : half;
+                float maxX = (i == 0 ? half : _width) - v.Width;
+                float nx = Math.Clamp(v.X + dx, minX, Math.Max(minX, maxX));
+                float ny = Math.Clamp(v.Y + dy, 0f,
+                    Math.Max(0f, _height - v.Height));
+                dxA[i] = nx - v.X;
+                dyA[i] = ny - v.Y;
+                eyes[i] = new Viewport(nx, ny, v.Width, v.Height, 0f, 1f);
+            }
         }
 
         _ctx.OMSetBlendState(null);
-        _ctx.PSSetShaderResource(0, _frameSrv!);
-        for (int i = 0; i < eyeCount; i++)
+        if (TestPattern)
         {
-            _ctx.RSSetViewport(eyes[i]);
-            _ctx.Draw(3, 0);
-        }
-        if (haveCursor && _cursorSrv is not null)
-        {
-            _ctx.OMSetBlendState(_alphaBlend);
+            // Calibration pattern replaces the desktop (cursor skipped);
+            // it goes through the same viewports + distortion pass, so
+            // what you align is exactly what the desktop will get.
+            var pcb = new PatternCB
+            {
+                Aspect = eyes[0].Height > 0f
+                    ? eyes[0].Width / eyes[0].Height : 1f,
+            };
+            _ctx.UpdateSubresource(ref pcb, _patternCb, 0u, 0u, 0u, null);
+            _ctx.PSSetShader(_psPattern);
+            _ctx.PSSetConstantBuffer(0, _patternCb);
             for (int i = 0; i < eyeCount; i++)
-                DrawCursorInEye(eyes[i], srcW, srcH);
-            _ctx.OMSetBlendState(null);
+            {
+                _ctx.RSSetViewport(eyes[i]);
+                _ctx.Draw(3, 0);
+            }
+            _ctx.PSSetShader(_ps); // restore for guide/cursor passes
+        }
+        else
+        {
+            _ctx.PSSetShaderResource(0, _frameSrv!);
+            for (int i = 0; i < eyeCount; i++)
+            {
+                _ctx.RSSetViewport(eyes[i]);
+                _ctx.Draw(3, 0);
+            }
+            if (haveCursor && _cursorSrv is not null)
+            {
+                _ctx.OMSetBlendState(_alphaBlend);
+                for (int i = 0; i < eyeCount; i++)
+                    DrawCursorInEye(eyes[i], srcW, srcH);
+                _ctx.OMSetBlendState(null);
+            }
         }
 
         // First-run operation guide (top-left End / top-right Zoom),
@@ -606,12 +709,14 @@ float4 PSG(VSOut i) : SV_Target
                 vp = new Viewport(half, 0, _width - half, _height, 0f, 1f);
             }
 
-            // Lens centre matches the IPD-shifted content centre.
-            float cx = 0.5f;
-            if (sbs) cx = (i == 0) ? 0.5f + IpdShift : 0.5f - IpdShift;
+            // Lens centre matches the ACTUAL (post-clamp) content shift
+            // from Pass 1, in this eye's viewport UV units.
+            float eyeW = !sbs ? _width : (i == 0 ? half : _width - half);
+            float cx = 0.5f + (sbs ? dxA[i] / eyeW : 0f);
+            float cy = 0.5f + (sbs ? dyA[i] / _height : 0f);
             var cb = new DistortCB
             {
-                Cx = cx, Cy = 0.5f,
+                Cx = cx, Cy = cy,
                 UOff = uOff, UScale = uScale,
                 K1 = K1, K2 = K2, En = en, Pad = 0f,
             };
@@ -644,7 +749,9 @@ float4 PSG(VSOut i) : SV_Target
             _sceneTex?.Dispose();
             _cb?.Dispose();
             _guideCb?.Dispose();
+            _patternCb?.Dispose();
             _sampler?.Dispose();
+            _psPattern?.Dispose();
             _psGuide?.Dispose();
             _psDistort?.Dispose();
             _ps?.Dispose();
