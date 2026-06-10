@@ -74,14 +74,24 @@ public partial class MainWindow : Window
     private const uint VK_Q = 0x51, VK_F = 0x46, VK_A = 0x41, VK_C = 0x43,
                        VK_D = 0x44, VK_H = 0x48, VK_V = 0x56, VK_S = 0x53,
                        VK_LEFT = 0x25, VK_UP = 0x26, VK_RIGHT = 0x27,
-                       VK_DOWN = 0x28, VK_W = 0x57;
+                       VK_DOWN = 0x28, VK_W = 0x57,
+                       VK_T = 0x54, VK_B = 0x42, VK_N = 0x4E,
+                       VK_I = 0x49, VK_J = 0x4A, VK_K = 0x4B, VK_L = 0x4C,
+                       VK_U = 0x55, VK_O = 0x4F;
     private const int HK_QUIT = 1, HK_CYCLE = 2, HK_AFFINITY = 3,
                       HK_CLIP = 4, HK_REDETECT = 5, HK_HIDECURSOR = 6,
                       HK_DISTORT = 7, HK_SCALE = 8,
                       HK_SCALE_UP = 9, HK_SCALE_DOWN = 10, HK_WRANGLE = 11,
-                      HK_IPD_IN = 12, HK_IPD_OUT = 13;
-    private const float IpdMin = -0.15f, IpdMax = 0.15f, IpdStepAmt = 0.01f;
+                      HK_IPD_IN = 12, HK_IPD_OUT = 13,
+                      HK_PATTERN = 14, HK_CURVE_UP = 15, HK_CURVE_DOWN = 16,
+                      HK_NUDGE_UP = 17, HK_NUDGE_DOWN = 18,
+                      HK_NUDGE_LEFT = 19, HK_NUDGE_RIGHT = 20,
+                      HK_YDIFF_NEG = 21, HK_YDIFF_POS = 22;
+    private const float IpdMin = -0.15f, IpdMax = 0.15f, IpdStepAmt = 0.005f;
     private const float ScaleMin = 0.5f, ScaleMax = 1.5f, ScaleStepAmt = 0.1f;
+    private const float NudgeStep = 0.005f, NudgeMin = -0.10f, NudgeMax = 0.10f;
+    private const float YDiffStep = 0.0025f, YDiffMin = -0.05f, YDiffMax = 0.05f;
+    private const float CurveFactor = 1.10f, K1Min = 0.02f, K1Max = 0.80f;
 
     private static readonly float[] ScaleSteps = { 1.0f, 0.9f, 0.8f, 0.7f };
     private int _scaleIdx;
@@ -249,13 +259,24 @@ public partial class MainWindow : Window
             RegisterHotKey(hwnd, HK_SCALE_DOWN, mods, VK_DOWN) &
             RegisterHotKey(hwnd, HK_WRANGLE, mods, VK_W) &
             RegisterHotKey(hwnd, HK_IPD_IN, mods, VK_RIGHT) &
-            RegisterHotKey(hwnd, HK_IPD_OUT, mods, VK_LEFT);
+            RegisterHotKey(hwnd, HK_IPD_OUT, mods, VK_LEFT) &
+            RegisterHotKey(hwnd, HK_PATTERN, mods, VK_T) &
+            RegisterHotKey(hwnd, HK_CURVE_UP, mods, VK_B) &
+            RegisterHotKey(hwnd, HK_CURVE_DOWN, mods, VK_N) &
+            RegisterHotKey(hwnd, HK_NUDGE_UP, mods, VK_I) &
+            RegisterHotKey(hwnd, HK_NUDGE_DOWN, mods, VK_K) &
+            RegisterHotKey(hwnd, HK_NUDGE_LEFT, mods, VK_J) &
+            RegisterHotKey(hwnd, HK_NUDGE_RIGHT, mods, VK_L) &
+            RegisterHotKey(hwnd, HK_YDIFF_NEG, mods, VK_U) &
+            RegisterHotKey(hwnd, HK_YDIFF_POS, mods, VK_O);
         Console.Error.WriteLine(ok
             ? "[INFO] Global hotkeys: Ctrl+Alt+Shift+ Q=quit F=cycle-monitor "
               + "A=capture-exclude C=confine-cursor D=re-detect-displays "
               + "H=hide-real-cursor V=vr-distortion S=scale-cycle "
               + "Up=enlarge Down=shrink W=keep-windows "
-              + "Right=ipd-narrower Left=ipd-wider. (Terminal Ctrl+C quits.)"
+              + "Right=ipd-narrower Left=ipd-wider "
+              + "T=test-pattern B/N=curvature+/- I/K/J/L=view-nudge "
+              + "U/O=right-eye-up/down. (Terminal Ctrl+C quits.)"
             : $"[WARN] RegisterHotKey failed (Win32 {Marshal.GetLastWin32Error()}). "
               + "Use terminal Ctrl+C to quit.");
     }
@@ -473,6 +494,42 @@ public partial class MainWindow : Window
                 handled = true;
                 ShiftIpdBy(-IpdStepAmt);
                 break;
+            case HK_PATTERN:
+                handled = true;
+                TogglePattern();
+                break;
+            case HK_CURVE_UP:
+                handled = true;
+                CurveBy(CurveFactor);
+                break;
+            case HK_CURVE_DOWN:
+                handled = true;
+                CurveBy(1f / CurveFactor);
+                break;
+            case HK_NUDGE_UP:
+                handled = true;
+                NudgeBy(0f, -NudgeStep);
+                break;
+            case HK_NUDGE_DOWN:
+                handled = true;
+                NudgeBy(0f, +NudgeStep);
+                break;
+            case HK_NUDGE_LEFT:
+                handled = true;
+                NudgeBy(-NudgeStep, 0f);
+                break;
+            case HK_NUDGE_RIGHT:
+                handled = true;
+                NudgeBy(+NudgeStep, 0f);
+                break;
+            case HK_YDIFF_NEG:
+                handled = true;
+                YDiffBy(-YDiffStep);
+                break;
+            case HK_YDIFF_POS:
+                handled = true;
+                YDiffBy(+YDiffStep);
+                break;
         }
         return IntPtr.Zero;
     }
@@ -482,10 +539,75 @@ public partial class MainWindow : Window
     {
         float v = _renderer.IpdShift + d;
         v = v < IpdMin ? IpdMin : (v > IpdMax ? IpdMax : v);
-        v = (float)Math.Round(v, 2);
+        v = (float)Math.Round(v, 3);
         _renderer.IpdShift = v;
+        Console.Error.WriteLine($"[INFO] IpdShift={v * 100:0.#}%");
+        PersistTuning();
+    }
+
+    /// <summary>Toggle the calibration test pattern.</summary>
+    private void TogglePattern()
+    {
+        _renderer.TestPattern = !_renderer.TestPattern;
         Console.Error.WriteLine(
-            $"[INFO] IpdShift={(int)Math.Round(v * 100)}%");
+            $"[INFO] TestPattern={_renderer.TestPattern} "
+            + "(cross=fusion target, circles/grid=curvature, "
+            + "orange border=content edge)");
+    }
+
+    /// <summary>Scale curvature strength K1 (and K2 proportionally).</summary>
+    private void CurveBy(float factor)
+    {
+        float k1 = Math.Clamp(_renderer.K1 * factor, K1Min, K1Max);
+        float s = _renderer.K1 > 0f ? k1 / _renderer.K1 : 1f;
+        _renderer.K1 = k1;
+        _renderer.K2 *= s;
+        Console.Error.WriteLine(
+            $"[INFO] Curvature K1={_renderer.K1:0.###} K2={_renderer.K2:0.###}");
+        PersistTuning();
+    }
+
+    /// <summary>Nudge BOTH eyes' view by (dx, dy); clamped, persisted.</summary>
+    private void NudgeBy(float dx, float dy)
+    {
+        if (dx != 0f)
+            _renderer.OffsetX = (float)Math.Round(
+                Math.Clamp(_renderer.OffsetX + dx, NudgeMin, NudgeMax), 3);
+        if (dy != 0f)
+            _renderer.OffsetY = (float)Math.Round(
+                Math.Clamp(_renderer.OffsetY + dy, NudgeMin, NudgeMax), 3);
+        Console.Error.WriteLine(
+            $"[INFO] ViewOffset X={_renderer.OffsetX * 100:0.#}% "
+            + $"Y={_renderer.OffsetY * 100:0.#}%");
+        PersistTuning();
+    }
+
+    /// <summary>Step the right-vs-left vertical difference (fusion fix).</summary>
+    private void YDiffBy(float d)
+    {
+        _renderer.EyeYDiff = (float)Math.Round(
+            Math.Clamp(_renderer.EyeYDiff + d, YDiffMin, YDiffMax), 4);
+        Console.Error.WriteLine(
+            $"[INFO] EyeYDiff={_renderer.EyeYDiff * 100:0.##}% "
+            + (_renderer.EyeYDiff >= 0f
+                ? "(right-eye image lower)" : "(right-eye image higher)"));
+        PersistTuning();
+    }
+
+    /// <summary>
+    /// Write the current calibration (IPD, offsets, eye Y-diff, K1/K2)
+    /// back to config.json so it survives restarts. Best-effort.
+    /// </summary>
+    private void PersistTuning()
+    {
+        _config.IpdShiftPercent = (float)Math.Round(_renderer.IpdShift * 100f, 2);
+        _config.OffsetXPercent = (float)Math.Round(_renderer.OffsetX * 100f, 2);
+        _config.OffsetYPercent = (float)Math.Round(_renderer.OffsetY * 100f, 2);
+        _config.EyeYDiffPercent =
+            (float)Math.Round(_renderer.EyeYDiff * 100f, 2);
+        _config.DistortK1 = _renderer.K1;
+        _config.DistortK2 = _renderer.K2;
+        _config.Save();
     }
 
     /// <summary>Step the SBS scale by <paramref name="d"/>, clamped.</summary>
@@ -552,9 +674,16 @@ public partial class MainWindow : Window
                 $"[INFO] ScreenScale={(int)(_config.StartupScale * 100)}% "
                 + "(startup). Ctrl+Alt+Shift+Up/Down to change.");
             _renderer.IpdShift = _config.IpdShift;
+            _renderer.OffsetX = _config.OffsetX;
+            _renderer.OffsetY = _config.OffsetY;
+            _renderer.EyeYDiff = _config.EyeYDiff;
             Console.Error.WriteLine(
-                $"[INFO] IpdShift={(int)Math.Round(_renderer.IpdShift * 100)}% "
-                + "(startup). Ctrl+Alt+Shift+→/← = narrower/wider.");
+                $"[INFO] IpdShift={_renderer.IpdShift * 100:0.#}% "
+                + $"ViewOffset X={_renderer.OffsetX * 100:0.#}% "
+                + $"Y={_renderer.OffsetY * 100:0.#}% "
+                + $"EyeYDiff={_renderer.EyeYDiff * 100:0.##}% (startup). "
+                + "Ctrl+Alt+Shift+→/←=ipd I/K/J/L=nudge U/O=eye-Y-diff "
+                + "T=test-pattern B/N=curvature.");
             _initialized = true;
             // Duplicate/mirror mode: hide the confusing real cursor and
             // draw a fixed arrow at the (content-correct) composited spot.
@@ -694,6 +823,33 @@ public partial class MainWindow : Window
             case Key.Left:
                 ShiftIpdBy(-IpdStepAmt);
                 break;
+            case Key.T:
+                TogglePattern();
+                break;
+            case Key.B:
+                CurveBy(CurveFactor);
+                break;
+            case Key.N:
+                CurveBy(1f / CurveFactor);
+                break;
+            case Key.I:
+                NudgeBy(0f, -NudgeStep);
+                break;
+            case Key.K:
+                NudgeBy(0f, +NudgeStep);
+                break;
+            case Key.J:
+                NudgeBy(-NudgeStep, 0f);
+                break;
+            case Key.L:
+                NudgeBy(+NudgeStep, 0f);
+                break;
+            case Key.U:
+                YDiffBy(-YDiffStep);
+                break;
+            case Key.O:
+                YDiffBy(+YDiffStep);
+                break;
         }
     }
 
@@ -747,6 +903,15 @@ public partial class MainWindow : Window
             UnregisterHotKey(hwnd, HK_WRANGLE);
             UnregisterHotKey(hwnd, HK_IPD_IN);
             UnregisterHotKey(hwnd, HK_IPD_OUT);
+            UnregisterHotKey(hwnd, HK_PATTERN);
+            UnregisterHotKey(hwnd, HK_CURVE_UP);
+            UnregisterHotKey(hwnd, HK_CURVE_DOWN);
+            UnregisterHotKey(hwnd, HK_NUDGE_UP);
+            UnregisterHotKey(hwnd, HK_NUDGE_DOWN);
+            UnregisterHotKey(hwnd, HK_NUDGE_LEFT);
+            UnregisterHotKey(hwnd, HK_NUDGE_RIGHT);
+            UnregisterHotKey(hwnd, HK_YDIFF_NEG);
+            UnregisterHotKey(hwnd, HK_YDIFF_POS);
         }
         _hwndSource?.RemoveHook(HotkeyHook);
         _hwndSource = null;
