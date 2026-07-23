@@ -304,3 +304,22 @@ py -3 .\tools\run_app.py --no-build
   輻輳で「近い/平面/重なりすぎ」感を生む。ContentScale=100%だと水平シフトは
   クランプで効かない（70-80%運用前提）。レンズ中心はクランプ後の実シフトに
   追従するよう修正済み（旧実装はクランプ時に中心が分離するバグ）。
+- **負荷軽減：静止時の描画スキップ（2026-06-11）**: 旧実装は画面が静止でも
+  FPS上限まで毎tickフル2パス描画＋Present。対策＝`SbsRenderer` に差分検出
+  ゲート導入。新フレーム取得／カーソル(`ScreenX/Y/Visible/ShapeVersion`)変化
+  ／チューニング値変更（12プロパティを `Set<T>` 経由にして値変化時のみ
+  `_dirty=true`）／`Resize` のいずれも無ければ **描画＋Present を丸ごとスキップ**
+  （FLIP_DISCARDで前フレーム残像）。取りこぼし保険に **1秒ハートビート**
+  （`_sincePresent` Stopwatch）。実測: 主モニタ更新中は renderFps が上限60でなく
+  内容変化率(~32)に追従＝ゲート動作の証拠、静止時は1-2まで低下。
+  - 併せて常駐処理を軽量化: OnRendering の重複 `ClampCursorToCapture()` 削除
+    （125Hzの `_clampTimer` が本務）、`_lastCursorDiag` 文字列は `corrected`
+    時のみ確保（毎tick確保のGCゴミ排除）、`WindowWrangler` は `StringBuilder`
+    を再利用（毎tick `new` 排除）。
+  - **1Hz `[DIAG]` は既定OFF**（毎秒stderr I/O排除）。**`VRB_DIAG=1` で復活**。
+    `smoke_test.py` は子プロセスに `VRB_DIAG=1` を渡す（`[DIAG]` を健全性
+    マーカーに使うため）。renderFps は実Present数(`SbsRenderer.PresentedFrames`)
+    ベースに変更＝ゲート後も真の描画レートを示す。
+  - **再発注意**: 新しい描画影響プロパティを足したら必ず `Set<T>`(dirty化)
+    経由にすること。オートプロパティのままだと変更が画面に反映されず
+    「1秒ごとにしか更新されない」症状になる（ハートビートで露見）。

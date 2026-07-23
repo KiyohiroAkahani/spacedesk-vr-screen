@@ -38,6 +38,7 @@ public sealed class WindowWrangler
     };
 
     private IntPtr _lastHandled;
+    private readonly StringBuilder _sb = new(64); // reused each tick (no alloc)
 
     /// <summary>
     /// Check the foreground window; if it is a normal window whose centre
@@ -50,9 +51,10 @@ public sealed class WindowWrangler
         if (h == IntPtr.Zero || h == ownHwnd) return;
         if (!IsWindowVisible(h) || IsIconic(h)) return;
 
-        var sb = new StringBuilder(64);
-        GetClassName(h, sb, sb.Capacity);
-        if (Skip.Contains(sb.ToString())) return;
+        _sb.Clear();
+        GetClassName(h, _sb, _sb.Capacity);
+        string cls = _sb.ToString();
+        if (Skip.Contains(cls)) return;
 
         if (!GetWindowRect(h, out RECT r)) return;
         int w = r.Right - r.Left, hgt = r.Bottom - r.Top;
@@ -75,7 +77,7 @@ public sealed class WindowWrangler
         int ny = capY + (capH - nh) / 2;
         SetWindowPos(h, IntPtr.Zero, nx, ny, nw, nh,
             SWP_NOZORDER | SWP_NOACTIVATE);
-        log($"[INFO] Moved stray window ({sb}) onto captured monitor "
+        log($"[INFO] Moved stray window ({cls}) onto captured monitor "
             + $"({nx},{ny} {nw}x{nh}).");
     }
 }

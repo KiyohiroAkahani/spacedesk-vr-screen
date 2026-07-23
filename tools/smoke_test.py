@@ -6,7 +6,8 @@ Automates the manual verification dance documented in the workflows
   * build exit code 0
   * stderr contains "[INFO] LensDistortion="  (device + ALL shaders compiled,
     renderer initialized — this line is only printed after Initialize())
-  * stderr contains "[DIAG]"                  (render/diag loop actually ticked)
+  * stderr contains "[DIAG]"                  (render/diag loop actually ticked;
+    the app only emits [DIAG] when VRB_DIAG is set, which this harness does)
   * stderr contains no "[FATAL]"              (no unhandled exception)
   * the process did not die before the timebox elapsed
 
@@ -24,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
+import os
 import subprocess
 import sys
 import time
@@ -82,9 +84,14 @@ def main() -> int:
 
     print(f"Launching {exe.relative_to(REPO_ROOT)} for {args.seconds:g}s ...")
     early_exit: int | None = None
+    # The [DIAG] health tick is gated behind VRB_DIAG in the app so a normal
+    # run does no per-second stderr I/O; the smoke harness opts in so it can
+    # confirm the render/diag loop is alive.
+    child_env = {**os.environ, "VRB_DIAG": "1"}
     with open(log_path, "wb") as log:
         proc = subprocess.Popen([str(exe)], cwd=str(REPO_ROOT),
-                                stdout=log, stderr=subprocess.STDOUT)
+                                stdout=log, stderr=subprocess.STDOUT,
+                                env=child_env)
         deadline = time.monotonic() + args.seconds
         while time.monotonic() < deadline:
             if proc.poll() is not None:

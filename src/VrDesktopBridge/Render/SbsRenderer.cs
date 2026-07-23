@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics;
 using Vortice.D3DCompiler;
 using Vortice.Direct3D;
@@ -131,9 +132,48 @@ float4 PSP(VSOut i) : SV_Target
     private ID3D11ShaderResourceView? _sceneSrv;
     private ID3D11Buffer _cb = null!;
 
-    public bool DistortionEnabled { get; set; } = true;
-    public float K1 { get; set; } = 0.22f;
-    public float K2 { get; set; } = 0.10f;
+    // --- Redraw gating -------------------------------------------------
+    // The desktop is often static (reading, watching a still page). To
+    // avoid paying a full 2-pass render + Present on every tick, RenderFrame
+    // draws only when something changed: a new captured frame, cursor
+    // movement, a tuning-value change (the properties below flip _dirty),
+    // or the periodic heartbeat. FLIP_DISCARD keeps the last presented
+    // image on screen while we skip, so skipping is visually seamless.
+    private bool _dirty = true;
+    private readonly Stopwatch _sincePresent = Stopwatch.StartNew();
+    private const long HeartbeatMs = 1000; // force a redraw at least this often
+    private int _lastCurX = int.MinValue, _lastCurY = int.MinValue;
+    private int _lastCurShape = -1;
+    private bool _lastCurVisible;
+
+    /// <summary>Force the next RenderFrame to redraw (e.g. after Resize).</summary>
+    public void Invalidate() => _dirty = true;
+
+    /// <summary>Count of frames actually drawn+presented (skips excluded).
+    /// Lets the host log a true render rate that drops when idle.</summary>
+    public long PresentedFrames { get; private set; }
+
+    private void Set<T>(ref T field, T value)
+    {
+        if (!EqualityComparer<T>.Default.Equals(field, value))
+        {
+            field = value;
+            _dirty = true;
+        }
+    }
+
+    private bool _distortionEnabled = true;
+    public bool DistortionEnabled
+    {
+        get => _distortionEnabled;
+        set => Set(ref _distortionEnabled, value);
+    }
+
+    private float _k1 = 0.22f;
+    public float K1 { get => _k1; set => Set(ref _k1, value); }
+
+    private float _k2 = 0.10f;
+    public float K2 { get => _k2; set => Set(ref _k2, value); }
 
     /// <summary>
     /// Horizontal IPD shift as a fraction of one eye's half-width
@@ -142,21 +182,24 @@ float4 PSP(VSOut i) : SV_Target
     /// inter-image distance so it matches the user's IPD / lens spacing.
     /// 0 = current behaviour (geometric half-centres).
     /// </summary>
-    public float IpdShift { get; set; } = 0f;
+    private float _ipdShift = 0f;
+    public float IpdShift { get => _ipdShift; set => Set(ref _ipdShift, value); }
 
     /// <summary>
     /// Common view offset applied to BOTH eyes, as a fraction of one
     /// eye's half-width (+ = right). Compensates the phone sitting
     /// left/right of centre in the goggle tray (asymmetric eyes).
     /// </summary>
-    public float OffsetX { get; set; } = 0f;
+    private float _offsetX = 0f;
+    public float OffsetX { get => _offsetX; set => Set(ref _offsetX, value); }
 
     /// <summary>
     /// Common vertical view offset for BOTH eyes, fraction of the
     /// screen height (+ = down). Compensates the phone sitting
     /// high/low relative to the lens centres.
     /// </summary>
-    public float OffsetY { get; set; } = 0f;
+    private float _offsetY = 0f;
+    public float OffsetY { get => _offsetY; set => Set(ref _offsetY, value); }
 
     /// <summary>
     /// Vertical difference BETWEEN the eyes, fraction of the screen
@@ -164,10 +207,12 @@ float4 PSP(VSOut i) : SV_Target
     /// half-and-half). Vertical disparity is the classic "each eye is
     /// fine alone, together they never lock" fusion killer.
     /// </summary>
-    public float EyeYDiff { get; set; } = 0f;
+    private float _eyeYDiff = 0f;
+    public float EyeYDiff { get => _eyeYDiff; set => Set(ref _eyeYDiff, value); }
 
     /// <summary>Show the calibration test pattern instead of the desktop.</summary>
-    public bool TestPattern { get; set; }
+    private bool _testPattern;
+    public bool TestPattern { get => _testPattern; set => Set(ref _testPattern, value); }
 
     private DesktopDuplicator _dupl = null!;
     private ID3D11Texture2D? _frameTex;
@@ -192,23 +237,27 @@ float4 PSP(VSOut i) : SV_Target
     private ID3D11Buffer _patternCb = null!;
 
     /// <summary>Show the first-run operation guide (host controls timeout).</summary>
-    public bool ShowGuide { get; set; } = true;
+    private bool _showGuide = true;
+    public bool ShowGuide { get => _showGuide; set => Set(ref _showGuide, value); }
 
     /// <summary>Guide fade alpha 0..1 (host animates this for fade-out).</summary>
-    public float GuideOpacity { get; set; } = 1f;
+    private float _guideOpacity = 1f;
+    public float GuideOpacity { get => _guideOpacity; set => Set(ref _guideOpacity, value); }
 
     private int _width;
     private int _height;
     private bool _haveFrame;
 
-    public RenderMode Mode { get; set; } = RenderMode.Single;
+    private RenderMode _mode = RenderMode.Single;
+    public RenderMode Mode { get => _mode; set => Set(ref _mode, value); }
 
     /// <summary>
     /// Scale of the mirrored image within each eye (1.0 = current/100%).
     /// Lower values shrink the image (more black border) — lets the user
     /// step the apparent screen size in VR. Cursor scales with it.
     /// </summary>
-    public float ContentScale { get; set; } = 1f;
+    private float _contentScale = 1f;
+    public float ContentScale { get => _contentScale; set => Set(ref _contentScale, value); }
 
     /// <summary>
     /// Duplicate-mode: the real OS cursor is hidden, so draw a fixed
@@ -378,6 +427,7 @@ float4 PSP(VSOut i) : SV_Target
             Format.B8G8R8A8_UNorm, SwapChainFlags.None);
         CreateRenderTarget();
         CreateSceneTarget();
+        _dirty = true; // geometry changed — force a redraw
     }
 
     /// <summary>
@@ -550,12 +600,36 @@ float4 PSP(VSOut i) : SV_Target
     {
         if (_swapChain is null || _frameTex is null) return;
 
-        if (_dupl.TryCopyFrameTo(_ctx, _frameTex))
+        bool dirty = _dirty;
+        if (_dupl.TryCopyFrameTo(_ctx, _frameTex)) // new desktop pixels
+        {
             _haveFrame = true;
+            dirty = true;
+        }
 
         if (!_haveFrame) return; // nothing captured yet — keep window blank
 
+        // EnsureCursorTexture refreshes _cursor state (pos/shape) and uploads
+        // a new texture only when the shape changes. Compare the fresh cursor
+        // state to what we last presented — movement must trigger a redraw.
         bool haveCursor = EnsureCursorTexture();
+        if (_cursor.ScreenX != _lastCurX || _cursor.ScreenY != _lastCurY
+            || _cursor.Visible != _lastCurVisible
+            || _cursor.ShapeVersion != _lastCurShape)
+            dirty = true;
+
+        // Safety heartbeat: redraw at least once a second even if some trigger
+        // was missed, and to keep the desktop-duplication pipeline warm.
+        if (_sincePresent.ElapsedMilliseconds >= HeartbeatMs)
+            dirty = true;
+
+        if (!dirty) return; // nothing changed — keep the last presented frame
+
+        _dirty = false;
+        _lastCurX = _cursor.ScreenX;
+        _lastCurY = _cursor.ScreenY;
+        _lastCurVisible = _cursor.Visible;
+        _lastCurShape = _cursor.ShapeVersion;
 
         int srcW = _dupl.OutputWidth;
         int srcH = _dupl.OutputHeight;
@@ -726,6 +800,8 @@ float4 PSP(VSOut i) : SV_Target
         }
 
         _swapChain.Present(1, PresentFlags.None);
+        _sincePresent.Restart();
+        PresentedFrames++;
     }
 
     public void Dispose()

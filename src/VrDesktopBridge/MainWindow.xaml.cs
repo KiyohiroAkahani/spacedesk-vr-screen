@@ -108,7 +108,6 @@ public partial class MainWindow : Window
     // window is on a secondary/occluded display): a background timer that
     // hard-clamps the pointer every few ms.
     private System.Timers.Timer? _clampTimer;
-    private long _frames;                       // diag: render ticks
     private long _clampCorrections;             // diag: SetCursorPos count
     private volatile string _lastCursorDiag = "n/a";
 
@@ -318,18 +317,23 @@ public partial class MainWindow : Window
         {
             Interval = TimeSpan.FromMilliseconds(1000),
         };
-        long lastFrames = 0;
+        // Set VRB_DIAG=1 to emit the 1 Hz [DIAG] line (renderFps meter etc).
+        // Off by default so a normal run does no per-second stderr I/O.
+        bool diag = !string.IsNullOrEmpty(
+            Environment.GetEnvironmentVariable("VRB_DIAG"));
+        long lastPresented = 0;
         _clipTimer.Tick += (_, _) =>
         {
             if (_confineCursor) ApplyClip();
-            long f = System.Threading.Interlocked.Read(ref _frames);
+            if (!diag) return;
+            long p = _renderer?.PresentedFrames ?? 0;
             long c = System.Threading.Interlocked.Read(ref _clampCorrections);
             Console.Error.WriteLine(
-                $"[DIAG] renderFps={f - lastFrames} confine={_confineCursor} "
+                $"[DIAG] renderFps={p - lastPresented} confine={_confineCursor} "
                 + $"cap=({_captureMon.X},{_captureMon.Y},"
                 + $"{_captureMon.Width}x{_captureMon.Height}) "
                 + $"clampHits={c} cursor={_lastCursorDiag}");
-            lastFrames = f;
+            lastPresented = p;
         };
         _clipTimer.Start();
 
@@ -730,19 +734,19 @@ public partial class MainWindow : Window
         {
             SetCursorPos(nx, ny);
             System.Threading.Interlocked.Increment(ref _clampCorrections);
+            // Only allocate the diagnostic string when we actually corrected
+            // (rare). This runs ~125×/s from _clampTimer; unconditional string
+            // interpolation here was steady Gen0 garbage even when idle.
+            _lastCursorDiag = $"({p.X},{p.Y})->({nx},{ny})*";
         }
-        _lastCursorDiag = $"({p.X},{p.Y})->({nx},{ny}){(corrected ? "*" : "")}";
     }
 
     private void OnRendering(object? sender, EventArgs e)
     {
         if (!_initialized) return;
 
-        System.Threading.Interlocked.Increment(ref _frames);
-
-        // Also clamp from the render tick (belt & suspenders; the primary
-        // driver is the background _clampTimer).
-        ClampCursorToCapture();
+        // Cursor confinement is driven by the 125 Hz _clampTimer; no need to
+        // also clamp here at the full compositor refresh rate.
 
         // FPS cap (Present already vsyncs; this throttles below refresh).
         double now = _frameClock.Elapsed.TotalMilliseconds;
